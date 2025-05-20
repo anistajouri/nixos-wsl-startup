@@ -27,11 +27,6 @@
     ];
   };
 
-#  programs.gnupg.agent = {
-#    enable = true;
-#    pinentryPackage = pkgs.pinentry-curses;
-#  };
-
   environment.enableAllTerminfo = true;
 
   security.sudo.wheelNeedsPassword = false;
