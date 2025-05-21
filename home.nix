@@ -64,7 +64,15 @@
     nodePackages.prettier                      # An opinionated code formatter.
     shellcheck       # A linter for shell scripts.
     shfmt            # A shell script formatter.
-    statix           # A linter for Nix code.   
+    statix           # A linter for Nix code.
+
+    kubectl
+    (google-cloud-sdk.withExtraComponents [
+      google-cloud-sdk.components.gke-gcloud-auth-plugin
+    ])
+
+    tenv
+    tflint
   ];
   nixvimConfig = import ./nixvim.nix;
 in {
