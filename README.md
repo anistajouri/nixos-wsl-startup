@@ -5,6 +5,73 @@ This repository is a startup for NixOS development environment on WSL.
 Nix enables declarative configuration-as-code, providing a modern development environment comparable to those used by advanced developers or DevOps teams, offering significant advantages over shell-script-based system configuration.
 
 
+## Quickstart
+
+1. Open powershell and make sure that the wsl working with version 2:
+
+```bash
+> wsl --version
+Version WSL : 2....
+```
+
+2. Check your git configuration (username and email) are correctly set:
+
+```bash
+git config --global --list
+```
+
+3. Under powershell, create a directory where to store the nixos wsl installation and start installation:
+
+```bash
+d:  # can be installed on other driver
+cd\
+mkdir nix
+cd nix
+git config --global core.autocrlf false
+git clone https://github.com/anistajouri/nixos-wsl-startup
+cd nixos-wsl-startup
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\install_nixos.ps1
+```
+
+RQ: Here, we are using the `RemoteSigned` policy to allow the script to run. 
+And we are using `git config --global core.autocrlf false` to avoid any issues with line endings in the scripts. 
+
+
+3. Start using your new NixOS-Dev WSL
+
+```bash
+wsl -d NixOS-Dev
+```
+
+
+4. To shutdown the WSL2 VM
+
+```bash
+exit
+wsl --shutdown
+```
+
+## Configuration
+
+1. the setup is declarative, you update it under `/mnt/d/nix/nixos-wsl-startup` and make changes wherever you want.
+
+2. To apply any change in the configuration :
+
+```bash
+nix-rebuild
+exit
+wsl --shutdown
+wsl -d NixOS-Dev
+```
+
+3. To clean up the system sometimes
+
+```bash
+nix-cleanup
+```
+
+
 # Checklist
 
 ```
@@ -46,61 +113,6 @@ We suppose that you have already:
 then you will install nix under D:\nix or C:\nix
 
 
-## Quickstart
-
-1. Open powershell and make sure that the wsl working with version 2:
-
-```bash
-> wsl --version
-Version WSL : 2....
-```
-
-2. Under powershell, create a directory where to store the nixos wsl installation and start installation:
-
-```bash
-d:  # can be installed on other driver
-cd\
-mkdir nix 
-cd nix
-git clone https://github.com/anistajouri/nixos-wsl-startup
-cd nixos-wsl-startup
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser 
-.\install_nixos.ps1 
-```
-
-
-3. Start using your new NixOS-Dev WSL
-
-```bash
-wsl -d NixOS-Dev
-```
-
-
-4. To shutdown the WSL2 VM
-
-```bash
-exit
-wsl --shutdown
-```
-
-## Configuration
-
-1. the setup is declarative, you update it under `/mnt/d/nix/nixos-wsl-startup` and make changes wherever you want.
-
-2. To apply any change in the configuration :
-
-```bash
-nix-rebuild
-exit
-wsl --shutdown
-wsl -d NixOS-Dev
-```
-
-3. To clean up the system sometimes
-
-```bash
-nix-cleanup
-```
 
 
 ## Github secret
