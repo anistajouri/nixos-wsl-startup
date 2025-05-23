@@ -241,10 +241,11 @@
         "nixvim": "nixvim"
       },
       "locked": {
-        "dirtyRev": "ee4996f86d5ca01c5d3fa411f263ab50f271f900-dirty",
-        "dirtyShortRev": "ee4996f-dirty",
         "lastModified": 1747681398,
-        "narHash": "sha256-hnUYcblzAiPfitxcPVnmpIQox2fdAJtEiaH1h3HmnCM=",
+        "narHash": "sha256-FCUIbQl2X+0Rny2TepFKZ9qgDh44eH8NbujOGyShA/M=",
+        "ref": "refs/heads/main",
+        "rev": "ee4996f86d5ca01c5d3fa411f263ab50f271f900",
+        "revCount": 1,
         "type": "git",
         "url": "file:///mnt/d/nix/LVim"
       },
@@ -362,11 +363,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1747485343,
-        "narHash": "sha256-YbsZyuRE1tobO9sv0PUwg81QryYo3L1F3R3rF9bcG38=",
+        "lastModified": 1747862697,
+        "narHash": "sha256-U4HaNZ1W26cbOVm0Eb5OdGSnfQVWQKbLSPrSSa78KC0=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "9b5ac7ad45298d58640540d0323ca217f32a6762",
+        "rev": "2baa12ff69913392faf0ace833bc54bba297ea95",
         "type": "github"
       },
       "original": {
