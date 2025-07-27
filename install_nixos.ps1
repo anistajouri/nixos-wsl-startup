@@ -26,8 +26,8 @@ function Check-WSLRequirements {
         $wslVersionLine = [string]($wslVersion | Select-Object -First 1).Trim()
         $wslVersionLine = Clean-String -InputString $wslVersionLine
 
-        # check if the wslVersionLine contains "Version WSL : 2"
-        if ($wslVersionLine -Match "WSL : 2.") {
+        # check if the wslVersionLine contains WSL version 2 (supports both English and French formats)
+        if ($wslVersionLine -Match "(WSL\s+version|Version\s+WSL)\s*:\s*2\.") {
             Write-Host "WSL version 2.x detected" -ForegroundColor Green
         } else {
             Write-Host "WSL version must be 2.x. Current version: $wslVersionLine" -ForegroundColor Red
@@ -117,6 +117,8 @@ function Configure-MySettings {
         dir = "/mnt/$($driveLetter.ToLower())"
         windows_name = $winusername
         home_name = $username
+        gitlab_token = ""  
+        github_token = ""
     }
     
     # Save to JSON file with Unix line endings
@@ -213,23 +215,45 @@ function Install-NixTools {
         }
 
 
-        # Download and verify NixOS-WSL
-        $nixosUrl = "https://github.com/nix-community/NixOS-WSL/releases/download/2405.5.4/nixos-wsl.tar.gz"
+        # Download and verify NixOS-WSL        
+        $nixosUrl = "https://github.com/nix-community/NixOS-WSL/releases/download/2411.6.0/nixos.wsl"
         $nixosHashUrl = "$nixosUrl.sha256"
-        $nixosPath = Join-Path $nixRoot "nixos-wsl.tar.gz"
+        $nixosPath = Join-Path $nixRoot "nixos.wsl"
 
         # Check if file already exists
         if (Test-Path $nixosPath) {
-            $userResponse = Read-Host "NixOS-WSL tarball already exists at $nixosPath. Do you want to redownload it? (Y/N)"
+            $userResponse = Read-Host "NixOS-WSL file already exists at $nixosPath. Do you want to redownload it? (Y/N)"
             if ($userResponse -eq "Y" -or $userResponse -eq "y") {
                 Write-Host "Redownloading NixOS-WSL..." -ForegroundColor Cyan
-                Invoke-WebRequest -Uri $nixosUrl -OutFile $nixosPath
+                
+                # Check if curl.exe is available for better performance
+                if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                    Write-Host "Using curl for download..." -ForegroundColor Green
+                    curl.exe -L -o $nixosPath $nixosUrl
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "Failed to download NixOS-WSL using curl"
+                    }
+                } else {
+                    Write-Host "Using Invoke-WebRequest for download..." -ForegroundColor Yellow
+                    Invoke-WebRequest -Uri $nixosUrl -OutFile $nixosPath
+                }
             } else {
-                Write-Host "Using existing NixOS-WSL tarball..." -ForegroundColor Cyan
+                Write-Host "Using existing NixOS-WSL file..." -ForegroundColor Cyan
             }
         } else {
             Write-Host "Downloading NixOS-WSL..." -ForegroundColor Cyan
-            Invoke-WebRequest -Uri $nixosUrl -OutFile $nixosPath
+            
+            # Check if curl.exe is available for better performance
+            if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+                Write-Host "Using curl for download..." -ForegroundColor Green
+                curl.exe -L -o $nixosPath $nixosUrl
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Failed to download NixOS-WSL using curl"
+                }
+            } else {
+                Write-Host "Using Invoke-WebRequest for download..." -ForegroundColor Yellow
+                Invoke-WebRequest -Uri $nixosUrl -OutFile $nixosPath
+            }
         }
         
         Write-Host "Getting hash from $nixosHashUrl..." -ForegroundColor Cyan
@@ -257,7 +281,7 @@ function Install-NixTools {
         
         Write-Host "Successfully imported NixOS WSL distribution" -ForegroundColor Green
         
-        # Cleanup downloaded tarball
+        # Cleanup downloaded file
         #Remove-Item $nixosPath -Force
         #Write-Host "Cleaned up temporary files" -ForegroundColor Green
 

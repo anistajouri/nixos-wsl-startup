@@ -5,6 +5,11 @@ This repository is a startup for NixOS development environment on WSL.
 Nix enables declarative configuration-as-code, providing a modern development environment comparable to those used by advanced developers or DevOps teams, offering significant advantages over shell-script-based system configuration.
 
 
+# NixOS/Package source Versions to be installed:
+
+- Base system: NixOS 24.11 (Vicuna)
+- Package sources: Using packages from the 25.05 channel
+
 ## Quickstart
 
 1. Open powershell and make sure that the wsl working with version 2:
@@ -72,35 +77,6 @@ nix-cleanup
 ```
 
 
-# Checklist
-
-```
-NixOS:
-✅ Auto-Install NixOS on WSL/Powershell/Windows 10
-✅ Fish shell/starship prompt
-
-Backend/Microservices:
-✅ Java flake.nix/spring boot profile on vscode/Github copilot/Github Actions
-✅ Java flake.nix/Github Actions Simplified with Nix
-✅ Java devcontainer/Github copilot
-✅ Python flake.nix/Neovim/Github copilot
-❌ Go App flake.nix/golang profile on vscode/Github copilot
-❌ Java Microservices flake.nix/testcontainer/docker compose/Grafana/Promotheus/spring boot profile on vscode/Github copilot
-
-Web:
-✅ Node.JS flake.nix/Angular profile on vscode/Github copilot/playwright e2e testing/jest
-
-
-
-Data/IA:
-❌ Jupyter/Python flake.nix/data profile on vscode/Github copilot
-❌ SQL flake.nix/Bigquery/BigqueryML/data profile on vscode/Github copilot
-
-Ops:
-✅ Minikube flake.nix/minikube/Neovim/Github copilot
-✅ Crossplane flake.nix/kind/Helm/Neovim/Github copilot
-✅ Terraform flake.nix/Google Cloud Platform/Neovim/Github copilot
-```
 
 # steps to install
 
