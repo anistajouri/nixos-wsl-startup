@@ -1,0 +1,9 @@
+{
+  "name": "Your Full Name",
+  "github_token": "",
+  "dir": "/mnt/d",
+  "email": "your.email@example.com",
+  "gitlab_token": "",
+  "windows_name": "your.windows.username",
+  "home_name": "yourusername"
+}

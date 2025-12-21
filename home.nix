@@ -4,14 +4,25 @@
   pkgs,
   username,
   nix-index-database,
+  minimalBuild ? false, # Flag to enable minimal package set for CI
+  hasLvim ? false, # Flag indicating if lvim overlay is available
   ...
 }: let
-  stable-packages = with pkgs; [
+  # Minimal package set for CI builds to speed up build times
+  minimal-packages = with pkgs; [
+    git # Essential for version control
+    curl # Basic networking tool
+    vim # Basic text editor
+    coreutils # Basic file, shell, and text manipulation utilities
+  ];
+
+  # Full package set for production/development builds
+  full-packages = with pkgs; [
     bat             # A modern replacement for cat, with syntax highlighting and Git integration.
     bottom          # A graphical process viewer for the terminal.
     coreutils       # Basic file, shell, and text manipulation utilities.
     curl            # A command-line tool for transferring data with URLs.
-    du-dust         # A more user-friendly version of du for disk usage analysis.
+    dust            # A more user-friendly version of du for disk usage analysis.
     fd              # A simple, fast, and user-friendly alternative to find.
     findutils       # A collection of utilities for finding files in a directory hierarchy.
     fx              # A command-line JSON processor.
@@ -66,22 +77,37 @@
     shfmt            # A shell script formatter.
     statix           # A linter for Nix code.
 
-    kubectl
     (google-cloud-sdk.withExtraComponents [
       google-cloud-sdk.components.gke-gcloud-auth-plugin
     ])
+    tenv # A tool to manage multiple versions of Terraform.
+    nodejs_24 # Node.js JavaScript runtime. Needed for vscode.
+    ffmpeg_6 # A complete, cross-platform solution to record, convert and stream audio and video.
+    python311 # Python programming language interpreter.
+    lazydocker # A simple terminal UI for docker.
+    kubectl # Kubernetes command-line tool.
 
-    tenv
-    tflint
   ];
+
+  # Choose package set based on minimalBuild flag
+  # When minimalBuild=true, use minimal package set to speed up CI builds
+  stable-packages =
+    if minimalBuild
+    then minimal-packages
+    else full-packages;
+
   nixvimConfig = import ./nixvim.nix;
 in {
   imports = [
-    nix-index-database.hmModules.nix-index
+    nix-index-database.homeModules.nix-index
   ];
 
-  # check stable version at https://github.com/NixOS/nixpkgs/tags 
-  home.stateVersion = "24.11";
+  # check stable version at https://github.com/NixOS/nixpkgs/tags
+  home.stateVersion = "25.11";
+
+  # Avoid automatic sd-switch re-exec during activations (WSL workaround)
+  # "suggest" will print a message instead of auto-restarting services
+  systemd.user.startServices = "sd-switch";
 
   home = {
     username = "${username}";
@@ -95,20 +121,26 @@ in {
   home.packages =
     stable-packages
     ++
-    [
+    # Only include lvim if: not minimal build AND lvim overlay is available
+    (if minimalBuild || !hasLvim
+    then [ ]
+    else [
       (pkgs.lvim.extend nixvimConfig)
-    ];
+    ]);
 
   programs = {
     home-manager.enable = true;
     nix-index.enable = true;
-    nix-index.enableFishIntegration = true;
-    nix-index-database.comma.enable = true;
+    nix-index.enableFishIntegration = !minimalBuild;
+    nix-index-database.comma.enable = !minimalBuild;
 
 
     # FIXME: disable this if you don't want to use the starship prompt
     starship.enable = true;
     starship.settings = {
+      # Increase timeout for slow filesystems (like Windows mounts in WSL)
+      scan_timeout = 30;
+      command_timeout = 1000;
       aws.disabled = true;
       gcloud.disabled = true;
       kubernetes.disabled = false;
@@ -132,7 +164,6 @@ in {
     fzf.enable = true;
     fzf.enableFishIntegration = true;
     lsd.enable = true;
-    lsd.enableAliases = true;
     zoxide.enable = true;
     zoxide.enableFishIntegration = true;
     zoxide.options = ["--cmd cd"];
@@ -141,17 +172,21 @@ in {
     direnv.enable = true;
     direnv.nix-direnv.enable = true;
 
-    git = {
-      enable = true;
-      delta.enable = true;
-      delta.options = {
+    delta = {
+      enable = !minimalBuild;
+      enableGitIntegration = true;
+      options = {
         line-numbers = true;
         side-by-side = true;
         navigate = true;
       };
-      userEmail = "${my_config.email}";
-      userName = "${my_config.name}";
-      extraConfig = {
+    };
+
+    git = {
+      enable = true;
+      settings = {
+        user.email = "${my_config.email}";
+        user.name = "${my_config.name}";
         # FIXME: comment or uncomment the next lines if you want to be able to clone private https repos
         url = {
 #           "https://oauth2:${my_config.github_token}@github.com" = {
@@ -175,7 +210,18 @@ in {
     # Fish config - you can fiddle with it if you want
     fish = {
       enable = true;
-      interactiveShellInit = ''
+      interactiveShellInit =
+        if minimalBuild
+        then ''
+          # Minimal fish configuration for CI
+          set -U fish_greeting
+        ''
+        else ''
+        # Ensure systemd user session environment is set (WSL workaround)
+        if not set -q DBUS_SESSION_BUS_ADDRESS
+          set -gx XDG_RUNTIME_DIR /run/user/(id -u)
+          systemctl --user daemon-reexec 2>/dev/null
+        end
 
         fish_add_path --append "/mnt/d/nix/LVim/config/winyank"
         ${pkgs.any-nix-shell}/bin/any-nix-shell fish --info-right | source
@@ -190,7 +236,7 @@ in {
 
         set -U fish_greeting
         export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :500 {}' --preview-window right:60%"
-      '';
+        '';
       functions = {
         refresh = "source $HOME/.config/fish/config.fish";
         take = ''mkdir -p -- "$1" && cd -- "$1"'';
@@ -240,25 +286,34 @@ in {
         pbpaste = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -command 'Get-Clipboard'";
         explorer = "/mnt/c/Windows/explorer.exe";
         # need for impure to manage external secrets
-        nix-rebuild = "sudo nixos-rebuild switch --flake /mnt/d/nix/nixos-wsl-startup#nixos-dev";
+        nix-rebuild = "sudo nixos-rebuild switch --flake /mnt/d/nix/nixos-wsl-startup#nixos-prod";
         nix-cleanup = "sudo nix-collect-garbage -d; sudo nix-store --gc";
 
         code = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code'/bin/code";
+        codei = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code Insiders'/bin/code-insiders";        
+        cc = "/home/${my_config.home_name}/claude/claude";
+        ccy = "/home/${my_config.home_name}/claude/claude-yolo";
+        cc2 = "/home/${my_config.home_name}/claude2/claude";
+        ccy2 = "/home/${my_config.home_name}/claude2/claude-yolo";
+        gemini = "/home/${my_config.home_name}/gemini/node_modules/.bin/gemini";
       };
-      plugins = [
-        {
-          inherit (pkgs.fishPlugins.autopair) src;
-          name = "autopair";
-        }
-        {
-          inherit (pkgs.fishPlugins.done) src;
-          name = "done";
-        }
-        {
-          inherit (pkgs.fishPlugins.sponge) src;
-          name = "sponge";
-        }
-      ];
+      plugins =
+        if minimalBuild
+        then [ ]
+        else [
+          {
+            inherit (pkgs.fishPlugins.autopair) src;
+            name = "autopair";
+          }
+          {
+            inherit (pkgs.fishPlugins.done) src;
+            name = "done";
+          }
+          {
+            inherit (pkgs.fishPlugins.sponge) src;
+            name = "sponge";
+          }
+        ];
     };
   };
 }

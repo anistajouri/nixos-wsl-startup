@@ -10,7 +10,7 @@
   };
 
   config = {
-  # add your own personal keymaps preferences
+    # add your own personal keymaps preferences
     keymaps = [
       {
         mode = "n";
@@ -27,7 +27,7 @@
       # Explain Code
       {
         mode = "n";
-        key = "<leader>ce";  # Space + ce
+        key = "<leader>ce"; # Space + ce
         action = ":CopilotChatExplain<CR>";
         options = {
           desc = "Copilot Explain Code";
@@ -37,7 +37,7 @@
       # Fix Code
       {
         mode = "n";
-        key = "<leader>cf";  # Space + cf
+        key = "<leader>cf"; # Space + cf
         action = ":CopilotChatFix<CR>";
         options = {
           desc = "Copilot Fix Code";
@@ -47,7 +47,7 @@
       # Optimize Code
       {
         mode = "n";
-        key = "<leader>co";  # Space + co
+        key = "<leader>co"; # Space + co
         action = ":CopilotChatOptimize<CR>";
         options = {
           desc = "Copilot Optimize Code";
@@ -57,7 +57,7 @@
       # Generate Tests
       {
         mode = "n";
-        key = "<leader>ct";  # Space + ct
+        key = "<leader>ct"; # Space + ct
         action = ":CopilotChatTests<CR>";
         options = {
           desc = "Copilot Generate Tests";
@@ -67,7 +67,7 @@
       # Add Documentation
       {
         mode = "n";
-        key = "<leader>cd";  # Space + cd
+        key = "<leader>cd"; # Space + cd
         action = ":CopilotChatDocs<CR>";
         options = {
           desc = "Copilot Add Documentation";
@@ -77,7 +77,7 @@
       # Open Chat (bonus)
       {
         mode = "n";
-        key = "<leader>cc";  # Space + cc
+        key = "<leader>cc"; # Space + cc
         action = ":CopilotChat<CR>";
         options = {
           desc = "Open Copilot Chat";

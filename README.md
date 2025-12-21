@@ -7,41 +7,49 @@ Nix enables declarative configuration-as-code, providing a modern development en
 
 # NixOS/Package source Versions to be installed:
 
-- Base system: NixOS 24.11 (Vicuna)
-- Package sources: Using packages from the 25.05 channel
+- Version WSL : 2.6.3.0
+- Base system: [2505.7.0] Wary Warbler
+- Package sources: Using packages from the 25.11 channel
+
+# steps to install
+
+We suppose that you have already:
+- you are under windows 10 or 11
+- installed WSL2 minimum version : 2.6.3.0
+- git config is correctly set
+- optinal: installed vscode (latest version)
+
+then you will install nix under D:\nix or C:\nix
+
 
 ## Quickstart
 
-1. Open powershell and make sure that the wsl working with version 2:
+1. Open powershell, update the wsl and make sure that the wsl working with version 2:
 
 ```bash
+> wsl --update
 > wsl --version
 Version WSL : 2....
 ```
 
-2. Check your git configuration (username and email) are correctly set:
+IMPORTANT: The version must be displayed.
 
-```bash
-git config --global --list
-```
-
-3. Under powershell, create a directory where to store the nixos wsl installation and start installation:
+2. Under powershell, create a directory where to store the nixos wsl installation and start installation:
 
 ```bash
 d:  # can be installed on other driver
 cd\
-mkdir nix
+mkdir nix 
 cd nix
 git config --global core.autocrlf false
-git clone https://github.com/anistajouri/nixos-wsl-startup
+git clone https://gitlab.tech.orange/developer-experience/nix-env-setup/nixos-wsl-startup
 cd nixos-wsl-startup
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\install_nixos.ps1
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser 
+.\install_nixos.ps1 
 ```
 
-RQ: Here, we are using the `RemoteSigned` policy to allow the script to run. 
-And we are using `git config --global core.autocrlf false` to avoid any issues with line endings in the scripts. 
-
+Screenshot of the installation:
+![windows wsl install](docs/install.png)
 
 3. Start using your new NixOS-Dev WSL
 
@@ -77,23 +85,9 @@ nix-cleanup
 ```
 
 
+## Gitlab secret
 
-# steps to install
-
-We suppose that you have already:
-- you are under windows 10 or 11
-- installed WSL2
-- git config is correctly set
-- optinal: installed vscode (latest version)
-
-then you will install nix under D:\nix or C:\nix
-
-
-
-
-## Github secret
-
-1. You can add later your github secrets using this script
+1. You can add later your gitlab secrets using this script
 
 ```bash
 ./git_secret.sh
@@ -105,7 +99,8 @@ then you will install nix under D:\nix or C:\nix
 1. configure gpg agent
 
 ```bash
-echo "pinentry-program /etc/profiles/per-user/atajouri/bin/pinentry-curses" > ~/.gnupg/gpg-agent.conf
+mkdir -p ~/.gnupg
+echo "pinentry-program /etc/profiles/per-user/$(whoami)/bin/pinentry-curses" > ~/.gnupg/gpg-agent.conf
 chmod 700 ~/.gnupg
 chmod 600 ~/.gnupg/gpg-agent.conf        
 gpgconf --kill all

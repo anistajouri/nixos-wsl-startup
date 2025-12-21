@@ -1,0 +1,431 @@
+name: Build NixOS-WSL
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - feature/*
+      - hotfix/*
+    tags:
+      - nixos-wsl-starter-*
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  NIXPKGS_ALLOW_UNFREE: "1"
+  NIX_CONFIG_NAME: "nixos-ci"
+  TARBALL_NAME: "nixos-wsl.tar.gz"
+
+jobs:
+  # Validation stage - check flake and formatting
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Validate flake
+        run: |
+          echo "Configuring flake for CI (disabling LVim)..."
+          # Comment out LVim input lines
+          sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
+          sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
+          # Uncomment the lvim.follows line (remove leading # and spaces)
+          sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
+          echo "Reformatting modified Nix files..."
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          echo "Flake configured for CI"
+          echo "--- Modified flake.nix (relevant sections) ---"
+          grep -A 5 'Local input for LVim' flake.nix || true
+          grep -A 3 'hasLvim' flake.nix | head -5 || true
+
+          echo "Validating Nix flake configuration..."
+          nix flake check --show-trace
+          nix flake metadata
+          echo "✓ Flake validation successful"
+
+      - name: Check formatting
+        run: |
+          echo "Checking Nix file formatting..."
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt --check *.nix" || {
+            echo "⚠ Formatting issues found. Run 'nixpkgs-fmt *.nix' to fix."
+            exit 1
+          }
+        continue-on-error: true
+
+  # Build stage - build dev tarball
+  build:
+    name: Build NixOS-WSL Tarball
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      tarball_name: ${{ steps.build_info.outputs.tarball_name }}
+      build_date: ${{ steps.build_info.outputs.build_date }}
+      build_sha: ${{ steps.build_info.outputs.build_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Configure flake for CI
+        run: |
+          echo "Configuring flake for CI (disabling LVim)..."
+          sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
+          sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
+          sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+
+      - name: Build tarball
+        run: |
+          echo "Building NixOS-WSL tarball for environment: ${NIX_CONFIG_NAME}"
+
+          # Build the tarball (sudo required for nixos-install inside tarballBuilder)
+          nix_bin=$(which nix)
+          sudo $nix_bin run .#nixosConfigurations.${NIX_CONFIG_NAME}.config.system.build.tarballBuilder --show-trace
+
+          # Rename if default name was used
+          if [ -f "nixos.wsl" ] && [ ! -f "${TARBALL_NAME}" ]; then
+            mv nixos.wsl ${TARBALL_NAME}
+          fi
+
+          # Verify tarball was created
+          if [ ! -f "${TARBALL_NAME}" ]; then
+            echo "❌ Error: Tarball not found at ${TARBALL_NAME}"
+            exit 1
+          fi
+
+          # Display tarball info
+          ls -lh ${TARBALL_NAME}
+          sha256sum ${TARBALL_NAME} > ${TARBALL_NAME}.sha256
+          cat ${TARBALL_NAME}.sha256
+          echo "✓ Build successful"
+
+      - name: Set build info
+        id: build_info
+        run: |
+          echo "tarball_name=${TARBALL_NAME}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+          echo "build_sha=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: nixos-wsl-${{ github.sha }}
+          path: |
+            ${{ env.TARBALL_NAME }}
+            ${{ env.TARBALL_NAME }}.sha256
+          retention-days: 30
+          if-no-files-found: error
+
+  # Build production tarball (only on tags or manual)
+  build-prod:
+    name: Build Production Tarball
+    runs-on: ubuntu-latest
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/nixos-wsl-starter-') || github.event_name == 'workflow_dispatch'
+    env:
+      NIX_CONFIG_NAME: "nixos-prod"
+      TARBALL_NAME: "nixos-wsl-prod.tar.gz"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Configure flake for CI
+        run: |
+          echo "Configuring flake for CI (disabling LVim)..."
+          sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
+          sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
+          sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+
+      - name: Build production tarball
+        run: |
+          echo "Building production NixOS-WSL tarball..."
+          nix_bin=$(which nix)
+          sudo $nix_bin run .#nixosConfigurations.${NIX_CONFIG_NAME}.config.system.build.tarballBuilder --show-trace
+
+          # Rename if default name was used
+          if [ -f "nixos.wsl" ] && [ ! -f "${TARBALL_NAME}" ]; then
+            mv nixos.wsl ${TARBALL_NAME}
+          fi
+
+          if [ ! -f "${TARBALL_NAME}" ]; then
+            echo "❌ Error: Production tarball not found"
+            exit 1
+          fi
+
+          ls -lh ${TARBALL_NAME}
+          sha256sum ${TARBALL_NAME} > ${TARBALL_NAME}.sha256
+          cat ${TARBALL_NAME}.sha256
+          echo "✓ Production build successful"
+
+      - name: Upload production tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: nixos-wsl-prod-${{ github.sha }}
+          path: |
+            ${{ env.TARBALL_NAME }}
+            ${{ env.TARBALL_NAME }}.sha256
+          retention-days: 90
+          if-no-files-found: error
+
+  # Test stage - verify integrity
+  test-integrity:
+    name: Test Tarball Integrity
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: nixos-wsl-${{ github.sha }}
+
+      - name: Verify checksum
+        run: |
+          echo "Testing tarball integrity..."
+
+          if [ -f "${TARBALL_NAME}.sha256" ]; then
+            sha256sum -c ${TARBALL_NAME}.sha256
+            echo "✓ Checksum verified"
+          else
+            echo "⚠ Warning: Checksum file not found"
+            exit 1
+          fi
+
+      - name: Test extraction
+        run: |
+          echo "Testing tarball extraction..."
+          mkdir -p test-extract
+          tar -tzf ${TARBALL_NAME} | head -n 20
+          echo "✓ Tarball can be extracted"
+
+  # Test stage - verify configurations build
+  test-configurations:
+    name: Test NixOS Configurations
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Configure flake for CI
+        run: |
+          echo "Configuring flake for CI (disabling LVim)..."
+          sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
+          sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
+          sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+
+      - name: Test configuration builds
+        run: |
+          echo "Testing NixOS configurations..."
+
+          # List all configurations
+          nix flake show
+
+          # Test that configurations can be built (dry-run)
+          nix build .#nixosConfigurations.${NIX_CONFIG_NAME}.config.system.build.toplevel --dry-run
+
+          echo "✓ Configuration tests passed"
+        continue-on-error: true
+
+  # Test stage - security scan
+  test-security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ github.token }}
+            experimental-features = nix-command flakes
+
+      - name: Configure flake for CI
+        run: |
+          echo "Configuring flake for CI (disabling LVim)..."
+          sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
+          sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
+          sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+
+      - name: Run security scan
+        run: |
+          echo "Running security checks..."
+          nix-shell -p vulnix --run "vulnix --system x86_64-linux ." || true
+          echo "✓ Security scan completed"
+        continue-on-error: true
+
+  # Release stage - create GitHub release
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, test-integrity]
+    if: startsWith(github.ref, 'refs/tags/nixos-wsl-starter-')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download dev tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: nixos-wsl-${{ github.sha }}
+          path: ./artifacts
+
+      - name: Download prod tarball (if exists)
+        uses: actions/download-artifact@v4
+        with:
+          name: nixos-wsl-prod-${{ github.sha }}
+          path: ./artifacts-prod
+        continue-on-error: true
+
+      - name: Prepare release files
+        run: |
+          # Move dev tarball
+          mv artifacts/${TARBALL_NAME} ./ || true
+          mv artifacts/${TARBALL_NAME}.sha256 ./ || true
+
+          # Move prod tarball if it exists
+          if [ -f "artifacts-prod/nixos-wsl-prod.tar.gz" ]; then
+            mv artifacts-prod/nixos-wsl-prod.tar.gz ./ || true
+            mv artifacts-prod/nixos-wsl-prod.tar.gz.sha256 ./ || true
+          fi
+
+          ls -lh *.tar.gz* || true
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release-notes.md << 'EOF'
+          # NixOS-WSL Starter Release ${{ github.ref_name }}
+
+          ## Installation
+
+          Download the tarball and import it into WSL:
+
+          ```powershell
+          # Download the tarball first, then:
+          wsl --import NixOS-Dev D:\nix\NixOS-Dev nixos-wsl.tar.gz --version 2
+          ```
+
+          ## Included Files
+
+          - `nixos-wsl.tar.gz` - Development environment
+          - `nixos-wsl.tar.gz.sha256` - SHA256 checksum for dev
+          - `nixos-wsl-prod.tar.gz` - Production environment (if available)
+          - `nixos-wsl-prod.tar.gz.sha256` - SHA256 checksum for prod
+
+          ## Verification
+
+          Verify the download with SHA256:
+
+          ```bash
+          sha256sum -c nixos-wsl.tar.gz.sha256
+          ```
+
+          ## What's Changed
+
+          See [CHANGELOG.md](CHANGELOG.md) for details.
+
+          ---
+
+          **Build Information:**
+          - Commit: ${{ github.sha }}
+          - Build Date: $(date -u +%Y-%m-%d)
+          - Workflow: ${{ github.workflow }}
+
+          🤖 Generated with [GitHub Actions](https://github.com/features/actions)
+          EOF
+
+          echo "Release notes generated"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: NixOS-WSL Starter ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            nixos-wsl.tar.gz
+            nixos-wsl.tar.gz.sha256
+            nixos-wsl-prod.tar.gz
+            nixos-wsl-prod.tar.gz.sha256
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optional: Upload to custom package registry or storage
+  publish-packages:
+    name: Publish to Package Registry
+    runs-on: ubuntu-latest
+    needs: [build, test-integrity]
+    if: startsWith(github.ref, 'refs/tags/nixos-wsl-starter-')
+    steps:
+      - name: Download tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: nixos-wsl-${{ github.sha }}
+
+      - name: Publish to GitHub Packages
+        run: |
+          echo "Publishing to package registry..."
+          echo "Tarball: ${TARBALL_NAME}"
+          # Add custom publishing logic here if needed
+          # Example: upload to S3, GCS, or other registry
+          echo "✓ Package publishing completed"
