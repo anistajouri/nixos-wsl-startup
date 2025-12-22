@@ -48,7 +48,7 @@ jobs:
           # Uncomment the lvim.follows line (remove leading # and spaces)
           sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
           echo "Reformatting modified Nix files..."
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt *.nix
           echo "Flake configured for CI"
           echo "--- Modified flake.nix (relevant sections) ---"
           grep -A 5 'Local input for LVim' flake.nix || true
@@ -62,7 +62,7 @@ jobs:
       - name: Check formatting
         run: |
           echo "Checking Nix file formatting..."
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt --check *.nix" || {
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt --check *.nix || {
             echo "⚠ Formatting issues found. Run 'nixpkgs-fmt *.nix' to fix."
             exit 1
           }
@@ -96,7 +96,7 @@ jobs:
           sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
           sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
           sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt *.nix
 
       - name: Build tarball
         run: |
@@ -168,7 +168,7 @@ jobs:
           sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
           sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
           sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt *.nix
 
       - name: Build production tarball
         run: |
@@ -258,7 +258,7 @@ jobs:
           sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
           sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
           sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt *.nix
 
       - name: Test configuration builds
         run: |
@@ -298,12 +298,12 @@ jobs:
           sed -i '/inputs\.lvim\.url/s/^[^#]/#&/' flake.nix
           sed -i '/inputs\.lvim\.flake/s/^[^#]/#&/' flake.nix
           sed -i 's/^[[:space:]]*#\(inputs\.lvim\.follows\)/\1/' flake.nix
-          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt *.nix"
+          nix shell nixpkgs#nixpkgs-fmt -c nixpkgs-fmt *.nix
 
       - name: Run security scan
         run: |
           echo "Running security checks..."
-          nix-shell -p vulnix --run "vulnix --system x86_64-linux ." || true
+          nix shell nixpkgs#vulnix -c vulnix --system x86_64-linux . || true
           echo "✓ Security scan completed"
         continue-on-error: true
 
