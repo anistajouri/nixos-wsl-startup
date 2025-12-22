@@ -98,9 +98,12 @@
 
   nixvimConfig = import ./nixvim.nix;
 in {
-  imports = [
-    nix-index-database.homeModules.nix-index
-  ];
+  imports =
+    if minimalBuild
+    then [ ]
+    else [
+      nix-index-database.homeModules.nix-index
+    ];
 
   # check stable version at https://github.com/NixOS/nixpkgs/tags
   home.stateVersion = "25.11";
@@ -130,13 +133,13 @@ in {
 
   programs = {
     home-manager.enable = true;
-    nix-index.enable = true;
+    nix-index.enable = !minimalBuild;
     nix-index.enableFishIntegration = !minimalBuild;
     nix-index-database.comma.enable = !minimalBuild;
 
 
     # FIXME: disable this if you don't want to use the starship prompt
-    starship.enable = true;
+    starship.enable = !minimalBuild;
     starship.settings = {
       # Increase timeout for slow filesystems (like Windows mounts in WSL)
       scan_timeout = 30;
