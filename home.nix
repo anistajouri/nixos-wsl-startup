@@ -286,8 +286,10 @@ in {
         pbpaste = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -command 'Get-Clipboard'";
         explorer = "/mnt/c/Windows/explorer.exe";
         # need for impure to manage external secrets
-        nix-rebuild = "sudo nixos-rebuild switch --flake /mnt/d/nix/nixos-wsl-startup#nixos-prod";
+        nix-rebuild = "sudo nixos-rebuild switch --flake /mnt/d/nix/nixos-wsl-startup#nixos-dev";
         nix-cleanup = "sudo nix-collect-garbage -d; sudo nix-store --gc";
+        gitlog =  "git log --all --graph --oneline"
+        zed =  "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Zed Editor'/zed.exe";
 
         code = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code'/bin/code";
         codei = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code Insiders'/bin/code-insiders";        
