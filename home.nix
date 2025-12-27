@@ -83,10 +83,11 @@
     tenv # A tool to manage multiple versions of Terraform.
     nodejs_24 # Node.js JavaScript runtime. Needed for vscode.
     ffmpeg_6 # A complete, cross-platform solution to record, convert and stream audio and video.
-    python311 # Python programming language interpreter.
+    python3Minimal # Python programming language interpreter.
+    go # Go language
     lazydocker # A simple terminal UI for docker.
     kubectl # Kubernetes command-line tool.
-
+    uv # Fast Python package installer and resolver, written in Rust
   ];
 
   # Choose package set based on minimalBuild flag
@@ -275,6 +276,7 @@ in {
           gsp = "git stash push -m";
           gsa = "git stash apply stash^{/";
           gsl = "git stash list";
+          glo =  "git log --all --graph --oneline";
         };
       shellAliases = {
         jvim = "nvim";
@@ -288,9 +290,7 @@ in {
         # need for impure to manage external secrets
         nix-rebuild = "sudo nixos-rebuild switch --flake /mnt/d/nix/nixos-wsl-startup#nixos-dev";
         nix-cleanup = "sudo nix-collect-garbage -d; sudo nix-store --gc";
-        gitlog =  "git log --all --graph --oneline"
         zed =  "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/Zed/bin/zed";
-
         code = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code'/bin/code";
         codei = "/mnt/c/Users/${my_config.windows_name}/AppData/Local/Programs/'Microsoft VS Code Insiders'/bin/code-insiders";        
         cc = "/home/${my_config.home_name}/claude/claude";

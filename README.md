@@ -11,6 +11,18 @@ Nix enables declarative configuration-as-code, providing a modern development en
 - Base system: [2505.7.0] Wary Warbler
 - Package sources: Using packages from the 25.11 channel
 
+##  Runtime Versions
+
+NixOS Version: 25.11 (using nixpkgs-25.11)
+- Node.js: 24.11.1 (Active LTS)
+- Python: 3.13.x (Current stable)
+- uv: 0.9.18 (Latest stable)
+- Go (Golang): 1.25.5 (Latest stable)
+- Rust: 1.92.1 (stable)
+- Java (JDK): 25 (LTS)
+- TypeScript: 5.9.3 (Latest stable)
+
+
 # steps to install
 
 We suppose that you have already:
@@ -226,3 +238,23 @@ this project uses a flat layout without any nesting or modularization.
   - NixOS options are set here
 - `home.nix` is where packages, dotfiles, terminal tools, environment variables
   and aliases are configured
+
+
+
+
+# Apply and Cleanup (Terminal Commands)
+
+After you have successfully rebuilt and verified your system is working on 25.11, run these commands inside WSL to remove the old version and optimize storage:
+
+```bash
+nix-collect-garbage -d
+nix-store --verify --check-contents
+```
+
+# Note on WSL Disk Size:
+Even after cleaning up inside Linux, the Windows .vhdx file
+
+usually does not shrink automatically. If disk space on Windows is critical, you can compact the WSL disk image using PowerShell:
+wsl --manage NixOS --set-sparse true (if using a newer WSL version) or using diskpart.
+
+
